@@ -4,12 +4,16 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.example.Universe.Companion.DELAY_MS
 import kotlin.random.Random
 
 class Universe {
 
     companion object {
-        const val SIZE = 50;
+        const val SIZE = 50
+        const val SHOW_CELLSTATE = true
+        const val DELAY_MS = 500L
+        const val PARALLEL = true
 
         fun defaultSart(): Universe {
             return Universe().apply {
@@ -34,27 +38,50 @@ class Universe {
 
     var grid: Array<Array<Cell>> = Array(SIZE) { i -> Array(SIZE) { j -> Cell(i, j) } }
 
-    fun evolve() {
+    fun evolve() : Boolean {
         val nextGen = Array(SIZE) { i -> Array(SIZE) { j -> Cell(i, j) } }
+        var result = false
+
         runBlocking {
-            for (element in grid) {
-                for (j in element.indices) {
-                    val neighbours = async {
+            if (PARALLEL) {
+                for (element in grid) {
+                    for (j in element.indices) {
+                        val neighbours = async {
                             grid.countNeighbours(element[j].x, element[j].y)
                         }
-                    launch {
-                        nextGen[element[j].x][element[j].y].alive =
-                        element[j].evolve(neighbours.await())
+                        launch {
+                            val alive = element[j].evolve(neighbours.await())
+                            nextGen[element[j].x][element[j].y].alive = alive
+                            if (!result && alive != element[j].alive) {
+                                result = true
+                            }
+
+                        }
+
+                    }
+                }
+            } else {
+                for (element in grid) {
+                    for (j in element.indices) {
+                        val neighbours = grid.countNeighbours(element[j].x, element[j].y)
+                        val alive = element[j].evolve(neighbours)
+                        nextGen[element[j].x][element[j].y].alive = alive
+                        if (!result && alive != element[j].alive) {
+                            result = true
+                        }
                     }
                 }
             }
         }
         grid = nextGen
+        return result
     }
 }
 
 suspend fun Array<Array<Cell>>.countNeighbours(x: Int, y: Int): Int {
     println("countNeighbours $x $y")
+    this[x][y].changeState(CellState.COUNTING)
+    delay(Random.nextLong(DELAY_MS))
     var count = 0
     for (i in -1..1) {
         for (j in -1..1) {
@@ -68,7 +95,7 @@ suspend fun Array<Array<Cell>>.countNeighbours(x: Int, y: Int): Int {
             }
         }
     }
-    delay(Random.nextLong(50))
+    this[x][y].changeState(CellState.COUNTED)
     println("countNeighbours $x $y done")
     return count
 }
