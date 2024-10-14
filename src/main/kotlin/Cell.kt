@@ -1,5 +1,6 @@
 package org.example
 import kotlinx.coroutines.*
+import org.example.Options.DELAY_MS
 import javax.swing.event.ChangeListener
 import kotlin.random.Random
 
@@ -19,7 +20,7 @@ class Cell(val x : Int, val y :Int)  {
                 !alive && neighbours == 3 -> true
                 else -> alive
             }
-        delay(Random.nextLong(Universe.DELAY_MS))
+        delay(Random.nextLong(DELAY_MS))
         println("evolve $x $y done")
         changeState(CellState.EVOLVED)
         nextGenAlive

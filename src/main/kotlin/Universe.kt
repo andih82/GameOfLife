@@ -4,19 +4,19 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.example.Universe.Companion.DELAY_MS
+import org.example.Options.DELAY_MS
+import org.example.Options.PARALLEL
+import org.example.Options.SIZE
+import javax.swing.event.ChangeListener
 import kotlin.random.Random
 
 class Universe {
 
     companion object {
-        const val SIZE = 50
-        const val SHOW_CELLSTATE = true
-        const val DELAY_MS = 500L
-        const val PARALLEL = true
+
 
         fun defaultSart(): Universe {
-            return Universe().apply {
+            return if(SIZE >= 50) Universe().apply {
                 grid[22][22].alive = true
                 grid[22][23].alive = true
                 grid[22][24].alive = true
@@ -32,7 +32,7 @@ class Universe {
                 grid[27][24].alive = true
                 grid[26][22].alive = true
                 grid[26][24].alive = true
-            }
+            } else  Universe()
         }
     }
 
@@ -76,6 +76,10 @@ class Universe {
         grid = nextGen
         return result
     }
+
+    fun addActionsListener(listener: ChangeListener) {
+        grid.forEach { it.forEach { it.actionListeners.add(listener) } }
+    }
 }
 
 suspend fun Array<Array<Cell>>.countNeighbours(x: Int, y: Int): Int {
@@ -90,7 +94,7 @@ suspend fun Array<Array<Cell>>.countNeighbours(x: Int, y: Int): Int {
             }
             val x1 = x + i
             val y1 = y + j
-            if (x1 >= 0 && x1 < Universe.SIZE && y1 >= 0 && y1 < Universe.SIZE && this[x1][y1].alive) {
+            if (x1 >= 0 && x1 < SIZE && y1 >= 0 && y1 < SIZE && this[x1][y1].alive) {
                 count++
             }
         }
