@@ -32,7 +32,19 @@ class Universe {
                 grid[27][24].alive = true
                 grid[26][22].alive = true
                 grid[26][24].alive = true
-            } else  Universe()
+            } else if(SIZE >= 10) Universe().apply {
+                grid[3][3].alive = true
+                grid[3][4].alive = true
+                grid[3][5].alive = true
+                grid[4][3].alive = true
+                grid[4][4].alive = true
+                grid[4][5].alive = true
+                grid[5][3].alive = true
+                grid[5][4].alive = true
+                grid[5][5].alive = true
+            }
+
+            else  Universe()
         }
     }
 
@@ -45,14 +57,14 @@ class Universe {
         runBlocking {
             if (PARALLEL) {
                 for (element in grid) {
-                    for (j in element.indices) {
+                    for (cell in element) {
                         val neighbours = async {
-                            grid.countNeighbours(element[j].x, element[j].y)
+                            grid.countNeighbours(cell.x, cell.y)
                         }
                         launch {
-                            val alive = element[j].evolve(neighbours.await())
-                            nextGen[element[j].x][element[j].y].alive = alive
-                            if (!result && alive != element[j].alive) {
+                            val alive = cell.evolve(neighbours.await())
+                            nextGen[cell.x][cell.y].alive = alive
+                            if (!result && alive != cell.alive) {
                                 result = true
                             }
 
@@ -100,6 +112,7 @@ suspend fun Array<Array<Cell>>.countNeighbours(x: Int, y: Int): Int {
         }
     }
     this[x][y].changeState(CellState.COUNTED)
+    delay(Random.nextLong(DELAY_MS))
     println("countNeighbours $x $y done")
     return count
 }

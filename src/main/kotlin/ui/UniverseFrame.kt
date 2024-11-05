@@ -1,14 +1,16 @@
 package org.example.ui
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.swing.Swing
 import org.example.CellState
 import org.example.Options.CELL_SIZE
-import org.example.Options.SHOW_CELLSTATE
+import org.example.Options.SHOW_CELL_STATE
 import org.example.Options.SIZE
 import org.example.Universe
 import java.awt.Canvas
@@ -132,7 +134,7 @@ class UniverseFrame(var universe: Universe) : Canvas(), ActionListener, ChangeLi
     }
 
     override fun stateChanged(e: ChangeEvent?) {
-        if (SHOW_CELLSTATE) {
+        if (SHOW_CELL_STATE) {
             e?.source?.let {
                 val cell = it as org.example.Cell
                 repaintCell(cell.x, cell.y, cell.state)
