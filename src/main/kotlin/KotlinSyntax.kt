@@ -1,33 +1,104 @@
-fun main(){
+import Product
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
+import order
+import perform
+import kotlin.system.measureTimeMillis
+import kotlin.time.Duration
+
+fun main1(){
+    myHelloFunction("Andi", { println(this) })
+    myHelloFunction("Tim") { println(this) }
+    myHelloFunction { println(this.uppercase())}
+    myHelloFunction()
 
 
-    println("Hello, World!")
-    val result = add(2, 3)
-    println("Result: $result")
-    val result2 = add() // uses default values
-    println("Result2: $result2")
+    runBlocking{
+    }
 
+    println("before runBlocking")
+    runBlocking{
+        launch {
+            println("start launch")
+            delay(500)
+            println("World")
+        }
+        val result = async {
+            println("start async")
+            delay(1000)
+            println("finished async")
+            (17 + 4) * 2
+        }
+        println("print result: ${result.await()}")
+        brake()
+    }
+    println("after runBlocking")
+}
 
-    val result3 = intOperation(2, 3, ::add)
-    println("Result3: $result3")
-    val result4 = intOperation(3,  operation =  { a, b -> a * b }, b=2 )
-    println("Result4: $result4")
-    val result5 = intOperation(2, 3) { a, b -> a - b }
-    println("Result5: $result5")
+fun myHelloFunction(name : String = "World", action : String.() -> Unit = { println(this) }) {
 
+    val greeting = StringBuilder().apply {
+        this.append("Hello, ")  // <this> is the StringBuilder
+        append(name)            // <this> is omitted
+    }.toString()
 
-    val printResult = fun Int.(prefix:String,  other: Int, operation : ( Int , Int) -> Int) = println( "$prefix ${operation(this, other)}")
-    2.printResult("Result6:", 3, ::add)
-    2.printResult("Result7:",3, { a, b -> a * b })
-    2.printResult("Result8:", 3) { a, b -> a - b }
+    greeting.action()
 
 }
 
-fun add(a: Int = 1, b: Int = 2): Int {
-    return a + b
+fun main2(){
+    println("before runBlocking")
+    runBlocking{
+        launch {
+            println("start launch")
+            delay(500)
+            println("World")
+        }
+        val result = async {
+            println("start async")
+            delay(1000)
+            println("finished async")
+            (17 + 4) * 2
+        }
+        println("print result: ${result.await()}")
+    }
+    println("after runBlocking")
 }
 
-fun intOperation(a: Int, b: Int, operation: (Int, Int) -> Int): Int {
-    return operation(a, b)
+suspend fun brake(){
+    println("taking a break")
+    yield()
 }
 
+fun main() {
+        runBlocking {
+            val wheels = async { order(Product.WHEELS) }
+            val windows = async { order(Product.WINDOWS) }
+            launch {
+                perform("Building car body")
+                launch { perform("attaching ${wheels.await().description}") }
+                launch { perform("attaching ${windows.await().description}") }
+            }
+        }
+}
+
+enum class Product(val description: String) {
+    WHEELS("wheels"),
+    WINDOWS("windows")
+}
+
+suspend fun order(product: Product, duration: Long = 1000): Product {
+    println("${product.description} on the way")
+    delay(duration)
+    println("${product.description} arrived")
+    return product
+}
+
+suspend fun perform(task: String) {
+    println("Performing: $task")
+    delay(500)
+}

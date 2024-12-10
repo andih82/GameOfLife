@@ -3,11 +3,18 @@ package org.example.ui
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.swing.Swing
+import kotlinx.coroutines.withContext
 import org.example.CellState
 import org.example.Options.CELL_SIZE
 import org.example.Options.SHOW_CELL_STATE
@@ -23,7 +30,7 @@ import java.awt.event.MouseEvent
 import javax.swing.event.ChangeEvent
 import javax.swing.event.ChangeListener
 
-class UniverseFrame(var universe: Universe) : Canvas(), ActionListener, ChangeListener {
+class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
 
     var running = false
 
@@ -43,94 +50,82 @@ class UniverseFrame(var universe: Universe) : Canvas(), ActionListener, ChangeLi
         })
     }
 
-    fun drawUniverse(g: Graphics) {
+    fun drawUniverse() {
         for (i in 0 until SIZE) {
             for (j in 0 until SIZE) {
-                if (universe.grid[i][j].alive) {
-                    g.fillCell(i, j)
-                } else {
-                    g.clearCell(i, j)
-                }
+                repaintCell(i, j)
             }
         }
     }
 
     fun repaintCell(x: Int, y: Int, state: CellState = CellState.IDLE) {
+        graphics.clearCell(x, y)
         when (state) {
             CellState.IDLE -> {
                 if (universe.grid[x][y].alive)
-                    graphics.fillCell(x, y)
-                else
-                    graphics.clearCell(x, y)
-
+                    graphics.fillCell(x, y, Color.BLACK)
             }
 
-            CellState.EVOLVED -> {
-                if (universe.grid[x][y].nextGenAlive)
-                    graphics.fillCell(x, y)
-                else
-                    graphics.clearCell(x, y)
-
-            }
-
+            CellState.EVOLVING -> graphics.drawCell(x, y, Color.BLUE)
+            CellState.EVOLVED -> graphics.fillCell(x, y, Color.BLUE)
             CellState.COUNTING -> graphics.drawCell(x, y, Color.RED)
             CellState.COUNTED -> graphics.fillCell(x, y, Color.RED)
-            CellState.EVOLVING -> graphics.fillCell(x, y, Color.BLUE)
+            CellState.UPDATING -> graphics.drawCell(x, y, Color.GREEN)
+            CellState.UPDATED -> graphics.fillCell(x, y, Color.GREEN)
         }
-        repaint(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
     }
 
     override fun paint(g: Graphics?) {
         super.paint(g)
-        drawUniverse(g!!)
+        drawUniverse()
     }
 
-    override fun repaint() {
-        drawUniverse(graphics)
-    }
-
-    @OptIn(DelicateCoroutinesApi::class)
-    override fun actionPerformed(e: ActionEvent?) {
-        GlobalScope.launch(Dispatchers.Swing) {
+    fun actionPerformed(e: ActionEvent?) {
+        CoroutineScope(Dispatchers.Default).launch {
             when (e?.actionCommand) {
                 "Reset" -> reset()
                 "Step" -> step()
-                "Play" -> play()
                 "Stop" -> stop()
+                "Play" -> play()
                 "Clear" -> clear()
-
                 else -> println("Unknown command")
-
             }
         }
     }
 
-    fun reset() {
+    suspend fun reset() {
+        stop()
         universe = Universe.defaultSart().apply { addActionsListener(this@UniverseFrame) }
-        repaint()
+        drawUniverse()
     }
 
-    fun clear() {
+    suspend fun clear() {
+        stop()
         universe = Universe().apply { addActionsListener(this@UniverseFrame) }
-        repaint()
+        drawUniverse()
     }
 
-    fun step() {
-        universe.evolve().also { universe.addActionsListener(this@UniverseFrame) }
-        repaint()
-    }
-
-    suspend fun play() {
-        running = true
-        while (running && universe.evolve()) {
-            universe.addActionsListener(this@UniverseFrame)
-            delay(10L)
-            repaint()
+    suspend fun step() {
+        if (universe.evolutionJob?.isActive != true) {
+            universe.evolve()
         }
     }
 
-    fun stop() {
-        running = false
+    suspend fun play() {
+        if (universe.evolutionJob?.isActive != true) {
+            while (universe.evolve()) {
+                drawUniverse()
+                delay(100L)
+            }
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    suspend fun stop() {
+        universe.evolutionJob?.let {
+                println("stopping $it")
+                it.parent?.cancelAndJoin()
+        }
     }
 
     override fun stateChanged(e: ChangeEvent?) {

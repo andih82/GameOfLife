@@ -1,7 +1,7 @@
 import kotlinx.coroutines.*
 import kotlin.system.measureTimeMillis
 
-/*
+
 suspend fun brake(){
     println("taking a break")
     yield()
@@ -59,6 +59,10 @@ fun main() {
             }
         }
     }
+
     println("Time taken: ${totalTime}ms")
 }
+
+
+
 
