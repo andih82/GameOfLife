@@ -85,35 +85,37 @@ class Universe {
     }
 
     fun start() {
-        if(evolutionJob == null || evolutionJob?.isActive == false){
-            evolutionJob = evolve()
-        }
-        repeat(10){
+        repeat(1000){
             step()
         }
     }
     fun step() {
         if(evolutionJob == null || evolutionJob?.isActive == false){
             evolutionJob = evolve()
-        }else{
-            desiredAge.incrementAndGet()
+            println("started $evolutionJob")
         }
+        desiredAge.incrementAndGet()
     }
 
     fun evolve() = CoroutineScope(Dispatchers.IO).launch {
 
         launch {
             while (true) {
+
                 while (isRunning) {
                     println("${evovledCells.get()} cells evolved in this generation")
                     delay(50)
                 }
                     println("All cells evolved in this generation")
 
+
                     if (desiredAge.get() > age.get()) {
 
                         evovledCells.set(0)
                         age.incrementAndGet()
+                    }else{
+                        println("copleted $evolutionJob")
+                        evolutionJob?.cancel()
                     }
 
                 delay(1000)
@@ -124,6 +126,8 @@ class Universe {
                 cell.lifecycle()
             }
         }
+
+
     }
 
 }

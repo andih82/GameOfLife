@@ -2,12 +2,12 @@ package org.example
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.example.Options.DELAY_MS
 import org.example.Options.SHOW_CELL_STATE
 import org.example.Options.SIZE
 import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.event.ChangeEvent
 import javax.swing.event.ChangeListener
-import kotlin.random.Random
 
 class Cell(val x: Int, val y: Int, val universe: Universe) {
 
@@ -21,7 +21,6 @@ class Cell(val x: Int, val y: Int, val universe: Universe) {
     var changeListener: ChangeListener? = null
 
     var age = 0
-
 
     suspend fun lifecycle() {
         while (true) {
@@ -40,8 +39,8 @@ class Cell(val x: Int, val y: Int, val universe: Universe) {
                     }
                 }
             }
-            delay(Random.nextLong(10,100))
-
+//            delay(Random.nextLong(DELAY_MS))
+            delay(DELAY_MS)
         }
     }
 

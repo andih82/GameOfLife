@@ -12,6 +12,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.event.ChangeEvent
 import javax.swing.event.ChangeListener
+import kotlin.random.Random
 
 class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
 
@@ -21,24 +22,23 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
         universe.let { it.grid.flatten().forEach { cell -> cell.changeListener = this } }
         addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent?) {
-                e?.let {
-                    val x = it.x / CELL_SIZE
-                    val y = it.y / CELL_SIZE
-                    universe.grid[x][y].alive = !universe.grid[x][y].alive
-                    universe.grid[x][y].state.value = if (universe.grid[x][y].alive) CellState.ALIVE else CellState.DEAD
-                    repaintCell(x, y, universe.grid[x][y].state.value)
+                if(universe.evolutionJob == null || universe.evolutionJob?.isActive == false) {
+                    e?.let {
+                        val x = it.x / CELL_SIZE
+                        val y = it.y / CELL_SIZE
+                        universe.grid[x][y].alive = !universe.grid[x][y].alive
+                        universe.grid[x][y].state.value =
+                            if (universe.grid[x][y].alive) CellState.ALIVE else CellState.DEAD
+                        repaintCell(x, y, universe.grid[x][y].state.value)
+                    }
                 }
             }
         })
     }
 
     fun drawUniverse() {
-        for (i in 0 until SIZE) {
-            for (j in 0 until SIZE) {
-                if (universe.grid[i][j].alive) {
-                    repaintCell(i, j, CellState.ALIVE)
-                }
-            }
+        universe.grid.flatten().filter { it.alive }.forEach { cell ->
+                graphics.fillCell(cell.x, cell.y, Color.BLACK)
         }
     }
 
@@ -52,9 +52,13 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
     }
 
     override fun paint(g: Graphics?) {
-        super.paint(g)
         drawUniverse()
     }
+
+    fun paintAll(){
+        update(graphics)
+    }
+
 
     fun actionPerformed(e: ActionEvent?) {
         when (e?.actionCommand) {
@@ -63,6 +67,7 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
             "Stop" -> stop()
             "Play" -> play()
             "Clear" -> clear()
+            "Random" -> random()
             else -> println("Unknown command")
         }
     }
@@ -70,13 +75,29 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
     fun reset() {
         stop()
         universe = Universe.defaultSart().apply { grid.flatten().forEach { it.changeListener = this@UniverseFrame } }
-        paint(graphics)
+        paintAll()
     }
 
     fun clear() {
         stop()
-        universe = Universe().apply { grid.flatten().forEach { it.changeListener = this@UniverseFrame } }
-        paint(graphics)
+        universe = Universe().apply { grid.flatten().forEach { cell ->
+            cell.changeListener = this@UniverseFrame
+        }
+        }
+        paintAll()
+    }
+
+    fun random() {
+        stop()
+        universe = Universe().apply { grid.flatten().forEach { cell ->
+            cell.changeListener = this@UniverseFrame
+            if (Random.nextInt(100) < 30) {
+                cell.state.value = CellState.ALIVE
+                cell.alive = true
+            }
+        }
+        }
+        paintAll()
     }
 
     fun step() {

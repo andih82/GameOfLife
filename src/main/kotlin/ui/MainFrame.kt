@@ -45,6 +45,11 @@ class MainFrame: JFrame() {
                         universeFrame.actionPerformed(object : java.awt.event.ActionEvent(this, 0, "Clear"){})
                     }
                 })
+                add(JButton("Random").apply {
+                    addActionListener {
+                        universeFrame.actionPerformed(object : java.awt.event.ActionEvent(this, 0, "Random"){})
+                    }
+                })
                 isOpaque = true
             })
             add("Center", universeFrame)
