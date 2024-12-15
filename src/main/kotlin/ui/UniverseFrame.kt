@@ -1,30 +1,13 @@
 package org.example.ui
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.swing.Swing
-import kotlinx.coroutines.withContext
 import org.example.CellState
 import org.example.Options.CELL_SIZE
-import org.example.Options.SHOW_CELL_STATE
 import org.example.Options.SIZE
 import org.example.Universe
 import java.awt.Canvas
 import java.awt.Color
 import java.awt.Graphics
 import java.awt.event.ActionEvent
-import java.awt.event.ActionListener
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.event.ChangeEvent
@@ -32,19 +15,18 @@ import javax.swing.event.ChangeListener
 
 class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
 
-    var running = false
-
     init {
         setSize(SIZE * CELL_SIZE, SIZE * CELL_SIZE)
         preferredSize = size
-        universe.let { it.grid.forEach { row -> row.forEach { cell -> cell.actionListeners.add(this) } } }
+        universe.let { it.grid.flatten().forEach { cell -> cell.changeListener = this } }
         addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent?) {
                 e?.let {
                     val x = it.x / CELL_SIZE
                     val y = it.y / CELL_SIZE
                     universe.grid[x][y].alive = !universe.grid[x][y].alive
-                    repaintCell(x, y)
+                    universe.grid[x][y].state.value = if (universe.grid[x][y].alive) CellState.ALIVE else CellState.DEAD
+                    repaintCell(x, y, universe.grid[x][y].state.value)
                 }
             }
         })
@@ -53,25 +35,19 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
     fun drawUniverse() {
         for (i in 0 until SIZE) {
             for (j in 0 until SIZE) {
-                repaintCell(i, j)
+                if (universe.grid[i][j].alive) {
+                    repaintCell(i, j, CellState.ALIVE)
+                }
             }
         }
     }
 
-    fun repaintCell(x: Int, y: Int, state: CellState = CellState.IDLE) {
-        graphics.clearCell(x, y)
+    fun repaintCell(x: Int, y: Int, state: CellState = CellState.DEAD) {
         when (state) {
-            CellState.IDLE -> {
-                if (universe.grid[x][y].alive)
-                    graphics.fillCell(x, y, Color.BLACK)
-            }
-
-            CellState.EVOLVING -> graphics.drawCell(x, y, Color.BLUE)
-            CellState.EVOLVED -> graphics.fillCell(x, y, Color.BLUE)
-            CellState.COUNTING -> graphics.drawCell(x, y, Color.RED)
-            CellState.COUNTED -> graphics.fillCell(x, y, Color.RED)
-            CellState.UPDATING -> graphics.drawCell(x, y, Color.GREEN)
-            CellState.UPDATED -> graphics.fillCell(x, y, Color.GREEN)
+            CellState.ALIVE -> graphics.fillCell(x, y, Color.BLACK)
+            CellState.DEAD -> graphics.clearCell(x, y)
+            CellState.EVOLVING -> graphics.fillCell(x, y, Color.BLUE)
+            CellState.UPDATING -> graphics.fillCell(x, y, Color.RED)
         }
     }
 
@@ -81,60 +57,46 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
     }
 
     fun actionPerformed(e: ActionEvent?) {
-        CoroutineScope(Dispatchers.Default).launch {
-            when (e?.actionCommand) {
-                "Reset" -> reset()
-                "Step" -> step()
-                "Stop" -> stop()
-                "Play" -> play()
-                "Clear" -> clear()
-                else -> println("Unknown command")
-            }
+        when (e?.actionCommand) {
+            "Reset" -> reset()
+            "Step" -> step()
+            "Stop" -> stop()
+            "Play" -> play()
+            "Clear" -> clear()
+            else -> println("Unknown command")
         }
     }
 
-    suspend fun reset() {
+    fun reset() {
         stop()
-        universe = Universe.defaultSart().apply { addActionsListener(this@UniverseFrame) }
-        drawUniverse()
+        universe = Universe.defaultSart().apply { grid.flatten().forEach { it.changeListener = this@UniverseFrame } }
+        paint(graphics)
     }
 
-    suspend fun clear() {
+    fun clear() {
         stop()
-        universe = Universe().apply { addActionsListener(this@UniverseFrame) }
-        drawUniverse()
+        universe = Universe().apply { grid.flatten().forEach { it.changeListener = this@UniverseFrame } }
+        paint(graphics)
     }
 
-    suspend fun step() {
-        if (universe.evolutionJob?.isActive != true) {
-            universe.evolve()
-        }
+    fun step() {
+        universe.step()
     }
 
-    suspend fun play() {
-        if (universe.evolutionJob?.isActive != true) {
-            while (universe.evolve()) {
-                drawUniverse()
-                delay(100L)
-            }
-        }
+    fun play() {
+        universe.start()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    suspend fun stop() {
-        universe.evolutionJob?.let {
-                println("stopping $it")
-                it.parent?.cancelAndJoin()
-        }
+    fun stop() {
+        universe.stop()
     }
 
     override fun stateChanged(e: ChangeEvent?) {
-        if (SHOW_CELL_STATE) {
-            e?.source?.let {
-                val cell = it as org.example.Cell
-                repaintCell(cell.x, cell.y, cell.state)
-            }
+        e?.source?.let {
+            val cell = it as org.example.Cell
+            repaintCell(cell.x, cell.y, cell.state.value)
         }
+
     }
 }
 

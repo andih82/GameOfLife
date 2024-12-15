@@ -3,18 +3,10 @@ package org.example
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import org.example.Options.PARALLEL
 import org.example.Options.SIZE
-import java.util.concurrent.CancellationException
-import javax.swing.event.ChangeListener
-import kotlin.coroutines.EmptyCoroutineContext
-import kotlin.random.Random
+import java.util.concurrent.atomic.AtomicInteger
 
 class Universe {
 
@@ -38,6 +30,22 @@ class Universe {
                 grid[27][24].alive = true
                 grid[26][22].alive = true
                 grid[26][24].alive = true
+
+                grid[22][22].state.value = CellState.ALIVE
+                grid[22][23].state.value = CellState.ALIVE
+                grid[22][24].state.value = CellState.ALIVE
+                grid[23][22].state.value = CellState.ALIVE
+                grid[23][24].state.value = CellState.ALIVE
+                grid[24][22].state.value = CellState.ALIVE
+                grid[24][24].state.value = CellState.ALIVE
+
+                grid[28][22].state.value = CellState.ALIVE
+                grid[28][23].state.value = CellState.ALIVE
+                grid[28][24].state.value = CellState.ALIVE
+                grid[27][22].state.value = CellState.ALIVE
+                grid[27][24].state.value = CellState.ALIVE
+                grid[26][22].state.value = CellState.ALIVE
+                grid[26][24].state.value = CellState.ALIVE
             } else if (SIZE >= 10) Universe().apply {
                 grid[3][3].alive = true
                 grid[3][4].alive = true
@@ -48,76 +56,74 @@ class Universe {
                 grid[5][3].alive = true
                 grid[5][4].alive = true
                 grid[5][5].alive = true
+                grid[3][3].state.value = CellState.ALIVE
+                grid[3][4].state.value = CellState.ALIVE
+                grid[3][5].state.value = CellState.ALIVE
+                grid[4][3].state.value = CellState.ALIVE
+                grid[4][4].state.value = CellState.ALIVE
+                grid[4][5].state.value = CellState.ALIVE
+                grid[5][3].state.value = CellState.ALIVE
+                grid[5][4].state.value = CellState.ALIVE
+                grid[5][5].state.value = CellState.ALIVE
             }
             else Universe()
         }
     }
 
+    var age = AtomicInteger(0)
+    var desiredAge = AtomicInteger(0)
+    var evovledCells = AtomicInteger(SIZE * SIZE)
     var grid: Array<Array<Cell>> = Array(SIZE) { i -> Array(SIZE) { j -> Cell(i, j, this) } }
-    var stop = false
 
     var evolutionJob: Job? = null
 
-    suspend fun evolve(): Boolean {
-        var changed = false
-            if (PARALLEL) {
-                runBlocking {
-                    evolutionJob = launch(){
-                        println("root $coroutineContext")
-                        async() {
-                            grid.flatten().forEach { cell ->
-                                val neighbours = async() {
-                                    cell.countNeighbours()
-                                }
-                                launch() {
-                                    if (cell.evolve(neighbours.await()))
-                                        changed = true
-                                }
+    val isRunning: Boolean
+        get() = evovledCells.get() < SIZE * SIZE
 
-                            }
-                        }.await()
-
-                        grid.flatten().forEach { cell ->
-                            launch() {
-                                cell.update()
-                                cell.changeState(CellState.IDLE)
-                            }
-                        }
-
-                    }
-                }
-            } else {
-                runBlocking {
-                    evolutionJob = launch() {
-                        grid.flatten().forEach { cell ->
-                                val neighbours = cell.countNeighbours()
-                                val evolved = cell.evolve(neighbours)
-                                if (!changed && evolved) {
-                                    changed = true
-                                }
-
-                        }
-                        grid.flatten().forEach { cell ->
-                                cell.update()
-                                cell.changeState(CellState.IDLE)
-                        }
-                    }
-                }
-            }
-        return changed
+    fun stop() {
+        evolutionJob?.cancel()
     }
 
-    fun addActionsListener(listener: ChangeListener) {
-        grid.forEach { it.forEach { it.actionListeners.add(listener) } }
-    }
-}
-
-fun Array<Array<Cell>>.print() {
-    repeat(2) { println("========================================================================================") }
-    for (element in this) {
-        for (j in element.indices) {
-            print(if (element[j].alive) "X" else ".")
+    fun start() {
+        if(evolutionJob == null || evolutionJob?.isActive == false){
+            evolutionJob = evolve()
         }
-        println()
+        repeat(10){
+            step()
+        }
     }
+    fun step() {
+        if(evolutionJob == null || evolutionJob?.isActive == false){
+            evolutionJob = evolve()
+        }else{
+            desiredAge.incrementAndGet()
+        }
+    }
+
+    fun evolve() = CoroutineScope(Dispatchers.IO).launch {
+
+        launch {
+            while (true) {
+                while (isRunning) {
+                    println("${evovledCells.get()} cells evolved in this generation")
+                    delay(50)
+                }
+                    println("All cells evolved in this generation")
+
+                    if (desiredAge.get() > age.get()) {
+
+                        evovledCells.set(0)
+                        age.incrementAndGet()
+                    }
+
+                delay(1000)
+            }
+        }
+        grid.flatten().shuffled().forEach { cell ->
+            launch {
+                cell.lifecycle()
+            }
+        }
+    }
+
 }

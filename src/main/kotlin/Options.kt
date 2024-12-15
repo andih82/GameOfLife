@@ -3,14 +3,13 @@ package org.example
 object Options {
 
     // number of cells in each dimension
-    const val SIZE = 50
+    const val SIZE = 1000
     // show the state of the cell in window
     const val SHOW_CELL_STATE = true
     // max random delay in ms for each cell to evolve
-    const val DELAY_MS = 100L
+    val DELAY_MS = 2L..10L
     // run the evolution in parallel
-    const val PARALLEL = true
     // size of each cell in pixels
-    const val CELL_SIZE = 25
+    const val CELL_SIZE = 2
 
 }

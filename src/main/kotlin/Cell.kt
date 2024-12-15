@@ -1,70 +1,103 @@
 package org.example
+
 import kotlinx.coroutines.*
-import org.example.Options.DELAY_MS
+import kotlinx.coroutines.flow.MutableStateFlow
+import org.example.Options.SHOW_CELL_STATE
 import org.example.Options.SIZE
+import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.event.ChangeEvent
 import javax.swing.event.ChangeListener
 import kotlin.random.Random
 
-class Cell(val x : Int, val y :Int, val universe: Universe)  {
+class Cell(val x: Int, val y: Int, val universe: Universe) {
 
+    val neighbours =
+        if ((x == 0 || x == SIZE - 1) && (y == 0 || y == SIZE - 1)) 3 else if (x == 0 || x == SIZE - 1 || y == 0 || y == SIZE - 1) 5 else 8
+    var counted = AtomicInteger(0)
     var alive = false
     var nextGenAlive = false
-    var state = CellState.IDLE
-    var actionListeners = mutableListOf<ChangeListener>()
+    val state = MutableStateFlow<CellState>(CellState.DEAD)
 
-    suspend fun evolve(neighbours : Int) : Boolean {
-        changeState(CellState.EVOLVING)
-        delay(Random.nextLong(DELAY_MS))
-            nextGenAlive = when {
-                alive && neighbours < 2 -> false
-                alive && neighbours > 3 -> false
-                !alive && neighbours == 3 -> true
-                else -> alive
+    var changeListener: ChangeListener? = null
+
+    var age = 0
+
+
+    suspend fun lifecycle() {
+        while (true) {
+            if (universe.age.get() > age) {
+                when (state.value) {
+                    CellState.ALIVE, CellState.DEAD -> {
+                        evolve()
+                    }
+
+                    CellState.EVOLVING -> {
+                        update()
+                    }
+
+                    CellState.UPDATING -> {
+                        update()
+                    }
+                }
             }
-        changeState(CellState.EVOLVED)
-        nextGenAlive
-        return nextGenAlive != alive
+            delay(Random.nextLong(10,100))
+
+        }
     }
 
-    suspend fun countNeighbours(): Int {
-        changeState(CellState.COUNTING)
-        delay(Random.nextLong(DELAY_MS))
+    fun evolve() {
+        changeVisualState(CellState.EVOLVING)
+        val neighbours = countNeighbours()
+        nextGenAlive = when {
+            alive && neighbours < 2 -> false
+            alive && neighbours > 3 -> false
+            !alive && neighbours == 3 -> true
+            else -> alive
+        }
+    }
+
+    fun countNeighbours(): Int {
         var count = 0
         for (i in -1..1) {
             for (j in -1..1) {
-                if (i == 0 && j == 0) {
-                    continue
-                }
+                if (i == 0 && j == 0) continue
                 val x1 = x + i
                 val y1 = y + j
-                if (x1 >= 0 && x1 < SIZE && y1 >= 0 && y1 < SIZE && universe.grid[x1][y1].alive) {
-                    count++
+
+                if (x1 >= 0 && x1 < SIZE && y1 >= 0 && y1 < SIZE) {
+                    universe.grid[x1][y1].counted.incrementAndGet()
+                    if (universe.grid[x1][y1].alive) {
+                        count++
+                    }
                 }
             }
         }
-        changeState(CellState.COUNTED)
-        delay(Random.nextLong(DELAY_MS))
         return count
     }
 
-    suspend fun update() {
-        changeState(CellState.UPDATING)
-        delay(Random.nextLong(DELAY_MS))
-        alive = nextGenAlive
-        changeState(CellState.UPDATED)
-        delay(Random.nextLong(DELAY_MS))
+    fun update() {
+        changeVisualState(CellState.UPDATING)
+        if (counted.get() == neighbours) {
+            counted.set(0)
+                alive = nextGenAlive
+                changeVisualState(if (alive) CellState.ALIVE else CellState.DEAD)
+
+            universe.evovledCells.incrementAndGet()
+            age++
+        }
     }
 
-    fun changeState(newState: CellState) {
-        state = newState
-        actionListeners.forEach { it.stateChanged(
-            object : ChangeEvent(this) {})
+    fun changeVisualState(newState: CellState) {
+        state.value = newState
+        if(SHOW_CELL_STATE) {
+            changeListener?.stateChanged(object : ChangeEvent(this) {})
+        }else if (newState == CellState.ALIVE || newState == CellState.DEAD){
+            changeListener?.stateChanged(object : ChangeEvent(this) {})
         }
     }
 
 }
 
 enum class CellState {
-    COUNTING, COUNTED, EVOLVING, EVOLVED, UPDATING, UPDATED, IDLE
+    EVOLVING, UPDATING, ALIVE, DEAD
 }
