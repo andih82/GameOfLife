@@ -11,35 +11,28 @@ import javax.swing.event.ChangeListener
 
 class Cell(val x: Int, val y: Int, val universe: Universe) {
 
-    val neighbours =
-        if ((x == 0 || x == SIZE - 1) && (y == 0 || y == SIZE - 1)) 3 else if (x == 0 || x == SIZE - 1 || y == 0 || y == SIZE - 1) 5 else 8
     var counted = AtomicInteger(0)
     var alive = false
     var nextGenAlive = false
     val state = MutableStateFlow<CellState>(CellState.DEAD)
-
+    val neighboursIndices = createNeighboursIndices()
     var changeListener: ChangeListener? = null
-
     var age = 0
 
+
     suspend fun lifecycle() {
+
         while (true) {
             if (universe.age.get() > age) {
                 when (state.value) {
                     CellState.ALIVE, CellState.DEAD -> {
                         evolve()
                     }
-
-                    CellState.EVOLVING -> {
-                        update()
-                    }
-
-                    CellState.UPDATING -> {
+                    CellState.EVOLVING, CellState.UPDATING -> {
                         update()
                     }
                 }
             }
-//            delay(Random.nextLong(DELAY_MS))
             delay(DELAY_MS)
         }
     }
@@ -55,8 +48,8 @@ class Cell(val x: Int, val y: Int, val universe: Universe) {
         }
     }
 
-    fun countNeighbours(): Int {
-        var count = 0
+    fun createNeighboursIndices(): List<Pair<Int, Int>> {
+        val neighbours = mutableListOf<Pair<Int, Int>>()
         for (i in -1..1) {
             for (j in -1..1) {
                 if (i == 0 && j == 0) continue
@@ -64,29 +57,37 @@ class Cell(val x: Int, val y: Int, val universe: Universe) {
                 val y1 = y + j
 
                 if (x1 >= 0 && x1 < SIZE && y1 >= 0 && y1 < SIZE) {
-                    universe.grid[x1][y1].counted.incrementAndGet()
-                    if (universe.grid[x1][y1].alive) {
-                        count++
-                    }
+                    neighbours.add(x1 to y1)
                 }
             }
+        }
+        return neighbours
+    }
+
+    fun countNeighbours(): Int {
+        var count = 0
+        for ((x,y) in neighboursIndices) {
+            if (universe.grid[x][y].alive) {
+                count++
+            }
+            counted.incrementAndGet()
         }
         return count
     }
 
     fun update() {
         changeVisualState(CellState.UPDATING)
-        if (counted.get() == neighbours) {
-            counted.set(0)
-                alive = nextGenAlive
-                changeVisualState(if (alive) CellState.ALIVE else CellState.DEAD)
+        if (counted.get() < neighboursIndices.size) return
+        counted.set(0)
+        alive = nextGenAlive
+        changeVisualState(if (alive) CellState.ALIVE else CellState.DEAD)
 
-            universe.evovledCells.incrementAndGet()
-            age++
-        }
+        universe.evovledCells.incrementAndGet()
+        age++
     }
 
     fun changeVisualState(newState: CellState) {
+        if (state.value == newState) return
         state.value = newState
         if(SHOW_CELL_STATE) {
             changeListener?.stateChanged(object : ChangeEvent(this) {})

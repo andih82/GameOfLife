@@ -19,7 +19,10 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
     init {
         setSize(SIZE * CELL_SIZE, SIZE * CELL_SIZE)
         preferredSize = size
-        universe.let { it.grid.flatten().forEach { cell -> cell.changeListener = this } }
+        universe.let { it.grid.flatten().forEach { cell ->
+                cell.changeListener = this
+            }
+        }
         addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent?) {
                 if(universe.evolutionJob == null || universe.evolutionJob?.isActive == false) {
@@ -74,7 +77,10 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
 
     fun reset() {
         stop()
-        universe = Universe.defaultSart().apply { grid.flatten().forEach { it.changeListener = this@UniverseFrame } }
+        universe = Universe.defaultSart().apply { grid.flatten().forEach{ cell ->
+            cell.changeListener = this@UniverseFrame
+            }
+        }
         paintAll()
     }
 
@@ -91,7 +97,7 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
         stop()
         universe = Universe().apply { grid.flatten().forEach { cell ->
             cell.changeListener = this@UniverseFrame
-            if (Random.nextInt(100) < 30) {
+            if (Random.nextInt(100) < 20) {
                 cell.state.value = CellState.ALIVE
                 cell.alive = true
             }

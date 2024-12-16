@@ -97,36 +97,30 @@ class Universe {
         desiredAge.incrementAndGet()
     }
 
-    fun evolve() = CoroutineScope(Dispatchers.IO).launch {
+    fun evolve() = CoroutineScope(Dispatchers.Default).launch {
 
         launch {
             while (true) {
-
                 while (isRunning) {
                     println("${evovledCells.get()} cells evolved in this generation")
-                    delay(50)
+                    delay(50L)
                 }
-                    println("All cells evolved in this generation")
-
-
-                    if (desiredAge.get() > age.get()) {
-
-                        evovledCells.set(0)
-                        age.incrementAndGet()
-                    }else{
-                        println("copleted $evolutionJob")
-                        evolutionJob?.cancel()
-                    }
-
+                println("All cells evolved in generation $age")
+                if (desiredAge.get() > age.get()) {
+                    evovledCells.set(0)
+                    age.incrementAndGet()
+                } else {
+                    println("completed $evolutionJob")
+                    evolutionJob?.cancel()
+                }
                 delay(1000)
             }
         }
         grid.flatten().shuffled().forEach { cell ->
-            launch {
+            launch(Dispatchers.IO) {
                 cell.lifecycle()
             }
         }
-
 
     }
 
