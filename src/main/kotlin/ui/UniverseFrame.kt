@@ -1,5 +1,8 @@
 package org.example.ui
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.example.CellState
 import org.example.Options.CELL_SIZE
 import org.example.Options.SIZE
@@ -40,8 +43,12 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
     }
 
     fun drawUniverse() {
-        universe.grid.flatten().filter { it.alive }.forEach { cell ->
-                graphics.fillCell(cell.x, cell.y, Color.BLACK)
+        CoroutineScope(Dispatchers.IO).launch {
+            universe.grid.flatten().filter { it.alive }.shuffled().forEach { cell ->
+                launch {
+                    graphics.fillCell(cell.x, cell.y, Color.BLACK)
+                }
+            }
         }
     }
 
@@ -55,6 +62,9 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
     }
 
     override fun paint(g: Graphics?) {
+        drawUniverse()
+    }
+    override fun repaint() {
         drawUniverse()
     }
 
@@ -123,7 +133,6 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
             val cell = it as org.example.Cell
             repaintCell(cell.x, cell.y, cell.state.value)
         }
-
     }
 }
 

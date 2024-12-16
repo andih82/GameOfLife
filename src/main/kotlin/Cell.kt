@@ -70,7 +70,7 @@ class Cell(val x: Int, val y: Int, val universe: Universe) {
             if (universe.grid[x][y].alive) {
                 count++
             }
-            counted.incrementAndGet()
+            universe.grid[x][y].counted.incrementAndGet()
         }
         return count
     }
@@ -81,7 +81,6 @@ class Cell(val x: Int, val y: Int, val universe: Universe) {
         counted.set(0)
         alive = nextGenAlive
         changeVisualState(if (alive) CellState.ALIVE else CellState.DEAD)
-
         universe.evovledCells.incrementAndGet()
         age++
     }
@@ -90,13 +89,20 @@ class Cell(val x: Int, val y: Int, val universe: Universe) {
         if (state.value == newState) return
         state.value = newState
         if(SHOW_CELL_STATE) {
-            changeListener?.stateChanged(object : ChangeEvent(this) {})
+            changeListener?.stateChanged(
+                ChangeEvent(this)
+            )
         }else if (newState == CellState.ALIVE || newState == CellState.DEAD){
-            changeListener?.stateChanged(object : ChangeEvent(this) {})
+            changeListener?.stateChanged(
+                ChangeEvent(this)
+            )
         }
+
     }
 
 }
+
+
 
 enum class CellState {
     EVOLVING, UPDATING, ALIVE, DEAD
