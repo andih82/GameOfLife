@@ -2,7 +2,7 @@ package org.example
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
-import org.example.Options.DELAY_MS
+import org.example.Options.CELL_DELAY_MS
 import org.example.Options.SHOW_CELL_STATE
 import org.example.Options.SIZE
 import java.util.concurrent.atomic.AtomicInteger
@@ -33,7 +33,7 @@ class Cell(val x: Int, val y: Int, val universe: Universe) {
                     }
                 }
             }
-            delay(DELAY_MS)
+            delay(CELL_DELAY_MS)
         }
     }
 

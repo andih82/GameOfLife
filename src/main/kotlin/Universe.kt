@@ -5,7 +5,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import org.example.Options.SIZE
+import org.example.Options.UNIVERSE_DELAY_MS
 import java.util.concurrent.atomic.AtomicInteger
 
 class Universe {
@@ -71,9 +73,11 @@ class Universe {
     }
 
     var age = AtomicInteger(0)
-    var desiredAge = AtomicInteger(0)
     var evovledCells = AtomicInteger(SIZE * SIZE)
     var grid: Array<Array<Cell>> = Array(SIZE) { i -> Array(SIZE) { j -> Cell(i, j, this) } }
+
+    var desiredAge = AtomicInteger(0)
+
 
     var evolutionJob: Job? = null
 
@@ -103,7 +107,7 @@ class Universe {
             while (true) {
                 while (isRunning) {
                     println("${evovledCells.get()} cells evolved in this generation")
-                    delay(50L)
+                    yield()
                 }
                 println("All cells evolved in generation $age")
                 if (desiredAge.get() > age.get()) {
@@ -113,7 +117,7 @@ class Universe {
                     println("completed $evolutionJob")
                     evolutionJob?.cancel()
                 }
-                delay(1000)
+                delay(UNIVERSE_DELAY_MS)
             }
         }
         grid.flatten().shuffled().forEach { cell ->

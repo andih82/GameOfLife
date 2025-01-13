@@ -7,8 +7,9 @@ object Options {
     // show the state of the cell in window
     const val SHOW_CELL_STATE = false
     // max random delay in ms for each cell to evolve
-    const val DELAY_MS = 10L
-    // run the evolution in parallel
+    const val CELL_DELAY_MS = 5L
+
+    const val UNIVERSE_DELAY_MS = 5L
     // size of each cell in pixels
     const val CELL_SIZE = 5
 
