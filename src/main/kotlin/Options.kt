@@ -9,8 +9,8 @@ object Options {
     // max random delay in ms for each cell to evolve
     const val CELL_DELAY_MS = 5L
 
-    const val UNIVERSE_DELAY_MS = 5L
+    const val UNIVERSE_DELAY_MS = 10L
     // size of each cell in pixels
-    const val CELL_SIZE = 5
+    const val CELL_SIZE = 8
 
 }

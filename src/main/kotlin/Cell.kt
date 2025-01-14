@@ -1,7 +1,6 @@
 package org.example
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.example.Options.CELL_DELAY_MS
 import org.example.Options.SHOW_CELL_STATE
 import org.example.Options.SIZE
@@ -14,7 +13,7 @@ class Cell(val x: Int, val y: Int, val universe: Universe) {
     var counted = AtomicInteger(0)
     var alive = false
     var nextGenAlive = false
-    val state = MutableStateFlow<CellState>(CellState.DEAD)
+    var state = CellState.DEAD
     val neighboursIndices = createNeighboursIndices()
     var changeListener: ChangeListener? = null
     var age = 0
@@ -24,7 +23,7 @@ class Cell(val x: Int, val y: Int, val universe: Universe) {
 
         while (true) {
             if (universe.age.get() > age) {
-                when (state.value) {
+                when (state) {
                     CellState.ALIVE, CellState.DEAD -> {
                         evolve()
                     }
@@ -86,8 +85,8 @@ class Cell(val x: Int, val y: Int, val universe: Universe) {
     }
 
     fun changeVisualState(newState: CellState) {
-        if (state.value == newState) return
-        state.value = newState
+        if (state == newState) return
+        state = newState
         if(SHOW_CELL_STATE) {
             changeListener?.stateChanged(
                 ChangeEvent(this)

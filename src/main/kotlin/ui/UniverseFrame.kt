@@ -33,9 +33,9 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
                         val x = it.x / CELL_SIZE
                         val y = it.y / CELL_SIZE
                         universe.grid[x][y].alive = !universe.grid[x][y].alive
-                        universe.grid[x][y].state.value =
+                        universe.grid[x][y].state =
                             if (universe.grid[x][y].alive) CellState.ALIVE else CellState.DEAD
-                        repaintCell(x, y, universe.grid[x][y].state.value)
+                        repaintCell(x, y, universe.grid[x][y].state)
                     }
                 }
             }
@@ -108,7 +108,7 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
         universe = Universe().apply { grid.flatten().forEach { cell ->
             cell.changeListener = this@UniverseFrame
             if (Random.nextInt(100) < 20) {
-                cell.state.value = CellState.ALIVE
+                cell.state = CellState.ALIVE
                 cell.alive = true
             }
         }
@@ -131,7 +131,7 @@ class UniverseFrame(var universe: Universe) : Canvas(), ChangeListener {
     override fun stateChanged(e: ChangeEvent?) {
         e?.source?.let {
             val cell = it as org.example.Cell
-            repaintCell(cell.x, cell.y, cell.state.value)
+            repaintCell(cell.x, cell.y, cell.state)
         }
     }
 }
